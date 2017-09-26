@@ -5,36 +5,100 @@ name: Graql
 file_extensions:
   - gql
 scope: source.gql
+
+variables:
+  graql_keyword: '\b(define|undefine|match|get|aggregate|insert|delete|isa|sub|plays|involves|relates|has|datatype|is-abstract|val|id|of|limit|offset|order by|compute|in|std|median|mean|max|min|sum|count|degree|path|cluster|when|then)\b'
+
+  template_control: '\b(if|then|for|else)\b'
+
+  meta_type: '\b(entity|role|relationship|attribute|rule)\b'
+
+  data_type: '\b(string|long|double|boolean|date)\b'
+
+  escaped_char: '\\(x\h{2}|n|r|t|0|"|''|\\|u\{\h{1,6}\})'
+
+  graql_variable: '[-\w]'
+
+  template_variable: '\<[a-zA-Z0-9_-]+(.[a-zA-Z0-9_-]+)*\>'
+
+  numeric: '[-+]?\d+(\.\d+)?'
+
+  label: '[a-zA-Z_][-\w]*'
+
+
+
 contexts:
   main:
-    - match: ‘(define|undefine|match|get|aggregate|insert|delete|isa|sub|plays|involves|relates|has|datatype|is-abstract|has|value|id|of|limit|offset|order|by|compute|in|std|median|mean|max|min|sum|count|degree|path|cluster|when|then|if|else)[^-\$a-zA-Z_0-9]'
-      scope: keyword
-    - match: '(entity|role|relationship|attribute|rule|concept)[^-\$a-zA-Z_0-9]'
-      scope: storage.type
-    - match: '\<[a-zA-Z0-9_-]+(.[a-zA-Z0-9_-]+)*\>'
-      scope: variable.parameter
-    - match: '(string|long|double|boolean|date)[^-\$a-zA-Z_0-9]'
-      scope: storage.type
-    - match: ">=|<=|>|<|>>|<<|contains|regex"
-      scope: keyword.operator
-    - match: '\$[-a-zA-Z_][-a-zA-Z_0-9]*'
-      scope: variable.parameter
-    - match: "[-a-zA-Z_][-a-zA-Z_0-9]*"
-      scope: entity.name.type
-    - match: '[0-9]+(\.[0-9][0-9]*)?'
-      scope: constant.numeric
+    - include: comments
+
+    - include: strings
+
+    - match: '{{template_control}}'
+      scope: keyword.control.gql
+
+    - match: '{{graql_keyword}}'
+      scope: keyword.other.gql
+
+    - match: '{{meta_type}}'
+      scope: storage.type.gql
+
+    - match: '{{template_variable}}'
+      scope: variable.other.gql
+
+    - match: '{{data_type}}'
+      scope: storage.type.gql
+
+    - match: '>=|<=|>|<|>>|<<|\b(contains|regex)\b'
+      scope: keyword.operator.gql
+
+    - match: '\$'
+      scope: punctuation.definition.variable.start.gql
+      push:
+        - meta_scope: variable.other.gql
+        - match: \s
+          scope: puncutation.definition.variable.end.gql
+          pop: true
+        - include: illegal-variable-char
+
+    - match: '{{label}}'
+      scope: entity.name.class.gql
+
+    - match: '{{numeric}}'
+      scope: constant.numeric.gql
+
+
+
+  strings:
+    - match: '"'
+      scope: punctuation.definition.string.begin.gql
+      push:
+        - meta_scope: string.quoted.double.gql
+        - match: '"'
+          scope: punctuation.definition.string.end.gql
+          pop: true
+        - include: escaped-char
+
+    - match: "'"
+      scope: punctuation.definition.string.begin.gql
+      push:
+        - meta_scope: string.quoted.single.gql
+        - match: "'"
+          scope: punctuation.definition.string.end.gql
+          pop: true
+        - include: escaped-char
+
+  escaped-char:
+    - match: '{{escaped_char}}'
+      scope: constant.character.escape.gql
+
+  illegal-variable-char:
+    - match: '[^{{graql_variable}}\s]+'
+      scope: invalid.illegal.gql
+      pop: true
+
+  comments:
     - match: "#"
       push:
         - meta_scope: comment.line
         - match: $
-          pop: true
-    - match: '"'
-      push:
-        - meta_scope: string.quoted
-        - match: '"'
-          pop: true
-    - match: "'"
-      push:
-        - meta_scope: string.quoted
-        - match: "'"
           pop: true
